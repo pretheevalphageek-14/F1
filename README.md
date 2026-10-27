@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Formula One Dataset
 
 This repository contains a collection of Formula One datasets sourced from [Ergast Developer API](https://ergast.com/mrd/). The datasets provide detailed information about various aspects of Formula One racing, including circuits, drivers, constructors, lap times, pit stops, qualifying results, race results, races, seasons, sprint results, and status.
@@ -175,3 +176,6 @@ For any questions or suggestions, please open an issue in this repository or con
 
 
 
+=======
+# F1
+>>>>>>> ea3a0db73ac1c963a850e6dd00c9041e0035e77c
