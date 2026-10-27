@@ -1,0 +1,18 @@
+## How to Run the Project
+
+1. **Extract the project folder** to your desired location.
+2. **Open the terminal** and navigate to the extracted project directory:
+
+   ```bash
+   cd path/to/your/project
+   ```
+
+3. **Run the Streamlit application** using the following command:
+
+   ```bash
+   python -m streamlit run app.py
+   ```
+
+4. Open the local URL displayed in the terminal to access the application in your browser.
+
+**Note:** Make sure Python and Streamlit are installed before running the application. Run the command from the directory containing `app.py`.
