@@ -9,6 +9,9 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 from database import DB_PATH, get_connection
+from crud_operations import (
+    delete_record, get_records_with_rowid, insert_record, update_record,
+)
 
 # ============================================================
 # F1 PADDOCK | Formula One dashboard + database CRUD
@@ -517,7 +520,7 @@ with timing_tab:
 # ============================================================
 with studio_tab:
     st.markdown('<div class="section-title">DATABASE STUDIO · CREATE, READ, UPDATE, DELETE</div>', unsafe_allow_html=True)
-    st.warning("These operations change the actual local database. Make a backup copy of the .duckdb file before modifying or deleting records.")
+    st.warning("The buttons below call Python functions in `crud_operations.py` and write to your actual DuckDB database. Back up the .duckdb file before editing or deleting records.")
     crud_table = st.selectbox("Choose table to manage", table_names, key="crud_table")
     try:
         schema = get_table_info(crud_table)
@@ -571,14 +574,7 @@ with studio_tab:
                     if not non_null:
                         st.error("Enter at least one value before inserting a record.")
                     else:
-                        columns_sql = ", ".join(qident(c) for c in non_null)
-                        placeholders = ", ".join(["?"] * len(non_null))
-                        values = list(non_null.values())
-                        with get_connection(read_only=False) as con:
-                            con.execute(
-                                f"INSERT INTO {qident(crud_table)} ({columns_sql}) VALUES ({placeholders})",
-                                values,
-                            )
+                        insert_record(crud_table, non_null)
                         invalidate_data()
                         st.success("Record inserted successfully.")
                         st.rerun()
@@ -591,8 +587,7 @@ with studio_tab:
                 st.info("This table is empty; add a record first.")
             else:
                 try:
-                    with get_connection() as con:
-                        record_frame = con.execute(f"SELECT rowid AS __rowid__, * FROM {qident(crud_table)} LIMIT 5000").fetchdf()
+                    record_frame = get_records_with_rowid(crud_table, limit=5000)
                     def record_label(row: pd.Series) -> str:
                         parts = []
                         for c in schema_cols[:4]:
@@ -621,11 +616,7 @@ with studio_tab:
                         else:
                             try:
                                 new_value = to_python_value(new_raw, str(dtype_by_col[chosen_column]))
-                                with get_connection(read_only=False) as con:
-                                    con.execute(
-                                        f"UPDATE {qident(crud_table)} SET {qident(chosen_column)} = ? WHERE rowid = ?",
-                                        [new_value, int(selected_rowid)],
-                                    )
+                                update_record(crud_table, int(selected_rowid), chosen_column, new_value)
                                 invalidate_data()
                                 st.success("Record updated successfully.")
                                 st.rerun()
@@ -639,8 +630,7 @@ with studio_tab:
                 st.info("This table is empty.")
             else:
                 try:
-                    with get_connection() as con:
-                        delete_frame = con.execute(f"SELECT rowid AS __rowid__, * FROM {qident(crud_table)} LIMIT 5000").fetchdf()
+                    delete_frame = get_records_with_rowid(crud_table, limit=5000)
                     delete_id = st.selectbox(
                         "Select record to delete",
                         delete_frame["__rowid__"].tolist(),
@@ -661,8 +651,7 @@ with studio_tab:
                             st.error("Tick the confirmation box before deleting.")
                         else:
                             try:
-                                with get_connection(read_only=False) as con:
-                                    con.execute(f"DELETE FROM {qident(crud_table)} WHERE rowid = ?", [int(delete_id)])
+                                delete_record(crud_table, int(delete_id))
                                 invalidate_data()
                                 st.success("Record deleted.")
                                 st.rerun()
@@ -722,7 +711,7 @@ with sql_tab:
     st.code(f"CREATE INDEX {qident(index_name)} ON {qident(index_table)} ({qident(index_column)});", language="sql")
     if st.button("Create index", key="create_index"):
         try:
-            with get_connection(read_only=False) as con:
+            with get_connection() as con:
                 con.execute(
                     f"CREATE INDEX IF NOT EXISTS {qident(index_name)} ON {qident(index_table)} ({qident(index_column)})"
                 )
